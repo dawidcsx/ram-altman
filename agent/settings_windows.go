@@ -1,0 +1,53 @@
+//go:build windows
+
+package main
+
+const settingsHTML = `<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RAM Altman • Mochi Software</title>
+<style>
+:root{color-scheme:dark;--bg:#070a09;--surface:#0d1610;--border:#25482c;--green:#8dff67;--text:#f3f7f3;--muted:#a4b5a8}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse 720px 540px at 82% -10%,rgba(51,151,65,.16),transparent),var(--bg);color:var(--text);font-family:Inter,'Segoe UI',system-ui,sans-serif}
+main{width:min(720px,calc(100% - 32px));margin:0 auto;padding:32px 0 48px}header{display:flex;justify-content:space-between;gap:20px;align-items:center;margin-bottom:46px}.brand{font-weight:800;letter-spacing:-.6px;color:#cbd9d0;font-size:17px}.brand b{color:#b276ff;font-size:25px}.version{font-size:12px;color:var(--muted)}h1{font-size:clamp(44px,9vw,72px);margin:0;letter-spacing:-.075em;line-height:1}h1 span{color:var(--green);text-shadow:0 0 30px #6bff3b52}p.intro{font-size:17px;color:var(--muted);margin:14px 0 28px}.chip{display:inline-flex;align-items:center;gap:8px;padding:8px 13px;border-radius:99px;background:#102a15;border:1px solid #3b723b;font-weight:700;font-size:12px;color:var(--green)}.dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px #69ff49}.chip.paused{color:#efc075;background:#352710;border-color:#81632b}.chip.paused .dot{background:#efc075;box-shadow:none}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}.metric,.panel{background:linear-gradient(140deg,#0e2114,#0d1410);border:1px solid var(--border);border-radius:18px}.metric{padding:23px}.metric small{color:var(--muted);font-size:13px}.metric strong{display:block;font-size:32px;margin-top:8px;letter-spacing:-.04em}.panel{padding:26px;margin-top:14px}.switchline{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0}.switchline+.switchline{border-top:1px solid #233d28}.switchline strong{font-size:17px}.switchline p{color:var(--muted);font-size:13px;margin:7px 0 0;max-width:500px}.switchline input{width:24px;height:24px;accent-color:#83ff61;cursor:pointer}label.endpoint{display:block;color:var(--muted);font-size:13px;margin:20px 0 8px}input[type=url]{width:100%;font:inherit;color:var(--text);background:#070e09;border:1px solid #315c36;border-radius:10px;padding:14px 15px;outline:none}input[type=url]:focus{border-color:var(--green);box-shadow:0 0 0 3px #71ff4420}.help{color:#97a79a;font-size:12px;line-height:1.6;margin:10px 0 0}.actions{display:flex;gap:11px;flex-wrap:wrap;margin-top:23px}button{border:1px solid #365c39;background:#172e1c;color:#e6f3e7;padding:13px 17px;border-radius:11px;font:700 14px inherit;cursor:pointer;transition:.15s}button:hover{filter:brightness(1.18)}button.primary{border:0;background:var(--green);color:#061006;font-weight:800;box-shadow:0 4px 23px #53ff3f28}button.danger{background:#2a1515;border-color:#693231;color:#ffb9b3}button:disabled{opacity:.45;cursor:not-allowed}.status{min-height:22px;font-size:14px;margin-top:18px;color:#bfcfc0;line-height:1.6}.status.error{color:#ffb29a}.foot{margin-top:24px;color:#76887b;font-size:12px;line-height:1.8}code{background:#1a2b1d;padding:3px 5px;border-radius:5px}a{color:var(--green)}@media(max-width:540px){.cards{grid-template-columns:1fr}.metric{padding:16px}.panel{padding:18px}}
+</style></head><body><main>
+<header><div class="brand"><b>M</b> Mochi Software</div><div class="version">RAM ALTMAN • v1.0.0</div></header>
+<div class="chip paused" id="chip"><span class="dot"></span><span id="chiptext">CHECKING STATUS</span></div>
+<h1>RAM <span>ALTMAN</span></h1>
+<p class="intro">Your RAM. Your computer. Sam's disappointment.</p>
+<div class="cards"><div class="metric"><small>Your total physical RAM</small><strong id="total">—</strong></div><div class="metric"><small>Currently available RAM</small><strong id="available">—</strong></div></div>
+<div class="panel">
+<div class="switchline"><div><strong>Contribute to the wastage</strong><p>Opt in to sending two RAM numbers every 5 minutes. Nothing is uploaded until you enable this.</p></div><input id="enabled" type="checkbox" aria-label="Contribute to the wastage"></div>
+<div class="switchline"><div><strong>Start with Windows</strong><p>Runs silently in the tray when you sign in. No admin privileges required.</p></div><input id="startup" type="checkbox" aria-label="Start with Windows"></div>
+<label class="endpoint" for="endpoint">Reporting server · HTTPS</label>
+<input id="endpoint" type="url" spellcheck="false" autocomplete="off" placeholder="https://example.com/api/ram/report">
+<p class="help">Only <code>device_id</code> (random ID), <code>total_bytes</code>, <code>available_bytes</code>, and report time are sent. Network servers will also see the connection IP address. Available RAM can include reclaimable cache.</p>
+<div class="actions"><button id="save" class="primary">Save settings</button><button id="send">Send report now</button></div>
+<div class="status" id="status">Loading status…</div>
+</div>
+<div class="actions"><button id="uninstall" class="danger">Uninstall RAM Altman</button><button id="exit">Exit app</button></div>
+<p class="foot">Closing this tab does not stop reporting while the tray app is running. You can reopen settings from the RAM Altman tray icon. Uninstall removes the installed app, your local anonymous ID, and startup entry.</p>
+</main><script>
+const TOKEN='{{.Token}}', API={'X-RAM-ALTMAN-TOKEN':TOKEN};
+const $=id=>document.getElementById(id);let editing=false;
+['enabled','startup','endpoint'].forEach(id=>$(id).addEventListener('change',()=>{editing=true}));
+$('endpoint').addEventListener('input',()=>{editing=true});
+const pretty=n=>n?(n/1073741824).toLocaleString('en-GB',{maximumFractionDigits:2})+' GiB':'—';
+const when=s=>s?new Date(s).toLocaleString():'never';
+function status(msg,error=false){$('status').textContent=msg;$('status').className=error?'status error':'status';}
+async function call(path,data){const res=await fetch(path,{method:'POST',headers:{...API,'Content-Type':'application/json'},body:JSON.stringify(data||{})});const raw=await res.text();if(!res.ok)throw Error(raw.slice(0,200));try{return JSON.parse(raw)}catch{return {}}}
+async function refresh(){try{
+ const res=await fetch('/api/state',{headers:API,cache:'no-store'});if(!res.ok)throw Error('Local agent not reachable');const s=await res.json();
+ if(!editing){$('enabled').checked=s.enabled;$('startup').checked=s.start_with_windows;$('endpoint').value=s.endpoint}
+ $('total').textContent=pretty(s.total_bytes);$('available').textContent=pretty(s.available_bytes);
+ $('chip').className='chip'+(s.enabled?'':' paused');$('chiptext').textContent=s.enabled?'REPORTING ENABLED':'REPORTING PAUSED';
+ $('send').disabled=!s.enabled || s.reporting;
+ if(!editing){status(s.reporting?'Sending report…':s.last_error?'Last attempt failed: '+s.last_error:s.last_success?'Last successful report: '+when(s.last_success):s.enabled?'Enabled; waiting for first response.':'Nothing has been sent. Enable contribution to begin.',Boolean(s.last_error))}
+ }catch(e){status(e.message,true)}}
+$('save').onclick=async()=>{try{await call('/api/settings',{enabled:$('enabled').checked,start_with_windows:$('startup').checked,endpoint:$('endpoint').value.trim()});editing=false;status('Settings saved. Sam remains disappointed.');setTimeout(refresh,1200)}catch(e){status(e.message,true)}};
+$('send').onclick=async()=>{try{await call('/api/send');status('Report queued.');setTimeout(refresh,1500)}catch(e){status(e.message,true)}};
+$('uninstall').onclick=async()=>{if(!confirm('Uninstall RAM Altman and delete local settings? Reporting stops immediately.'))return;try{await call('/api/uninstall');status('Uninstalling… you can close this tab.')}catch(e){status(e.message,true)}};
+$('exit').onclick=async()=>{try{await call('/api/exit');status('Stopped. You can close this tab.')}catch(e){status(e.message,true)}};
+refresh();setInterval(refresh,5000);
+</script></body></html>`
